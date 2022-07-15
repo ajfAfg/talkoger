@@ -18,11 +18,13 @@ require (
 )
 
 require (
-	github.com/aws/aws-sdk-go-v2 v1.16.7 // indirect
+	github.com/aws/aws-sdk-go-v2 v1.16.7
 	github.com/aws/aws-sdk-go-v2/config v1.15.14
 	github.com/aws/aws-sdk-go-v2/feature/dynamodb/attributevalue v1.9.6
+	github.com/aws/aws-sdk-go-v2/feature/dynamodb/expression v1.4.12
 	github.com/aws/aws-sdk-go-v2/internal/configsources v1.1.14 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.4.8 // indirect
+	github.com/aws/aws-sdk-go-v2/service/apigatewaymanagementapi v1.10.8
 	github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding v1.9.3 // indirect
 	github.com/aws/aws-sdk-go-v2/service/internal/endpoint-discovery v1.7.8 // indirect
 	github.com/aws/smithy-go v1.12.0 // indirect
