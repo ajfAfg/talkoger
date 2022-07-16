@@ -21,10 +21,10 @@ type requestData struct {
 	UserId string // UUID
 }
 
-type record struct {
+type talkog struct {
 	UserId    string // UUID
-	Message   string
-	Timestamp int64 // Unix Time
+	Timestamp int64  // Unix Time
+	Talk      string
 }
 
 func createErrorResponse(err error) (events.APIGatewayProxyResponse, error) {
@@ -45,7 +45,7 @@ func handle(ctx context.Context, req *events.APIGatewayWebsocketProxyRequest) (e
 	// TODO: use DynamoDB Stream
 	clientoo := dynamodb.NewFromConfig(conf)
 	expr, err := expression.NewBuilder().WithFilter(
-		expression.Contains(expression.Name("UserId"), requestData.UserId),
+		expression.Equal(expression.Name("UserId"), expression.Value(requestData.UserId)),
 	).Build()
 	if err != nil {
 		return createErrorResponse(err)
@@ -59,7 +59,7 @@ func handle(ctx context.Context, req *events.APIGatewayWebsocketProxyRequest) (e
 	if err != nil {
 		return createErrorResponse(err)
 	}
-	var records []record
+	var records []talkog
 	err = attributevalue.UnmarshalListOfMaps(scan.Items, &records)
 	if err != nil {
 		return createErrorResponse(err)
@@ -89,14 +89,15 @@ func handle(ctx context.Context, req *events.APIGatewayWebsocketProxyRequest) (e
 
 	client := apigatewaymanagementapi.NewFromConfig(cfg)
 	for _, record := range records {
-		data, err := json.Marshal(record.Message)
+		data, err := json.Marshal(record)
 		if err != nil {
 			return createErrorResponse(err)
 		}
-		_, err := client.PostToConnection(ctx, &apigatewaymanagementapi.PostToConnectionInput{
+		foo, err := client.PostToConnection(ctx, &apigatewaymanagementapi.PostToConnectionInput{
 			ConnectionId: &req.RequestContext.ConnectionID,
 			Data:         data,
 		})
+		_ = foo
 		if err != nil {
 			return createErrorResponse(err)
 		}
