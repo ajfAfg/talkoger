@@ -50,4 +50,5 @@ The following data will be sent.
   "Timestamp": 1657921427, // Unix time
   "Talk": "Nice to meet you."
 }
+...
 ```
