@@ -1,12 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import TextareaAutosize from "react-textarea-autosize";
 import { validate } from "uuid";
-
-type Talkog = {
-  userId: string;
-  talk: string;
-  timestamp: Date;
-};
+import { equals, Talkog } from "./talkog";
+import { useInterval } from "./useInterval";
 
 export const App = () => {
   const [userId, setUserId] = useState("");
@@ -20,12 +16,18 @@ export const App = () => {
 
     socketRef.current.addEventListener("message", ({ data }) => {
       const json = JSON.parse(data);
-      const talkog = {
+      const talkog: Talkog = {
         userId: json.UserId,
         talk: json.Talk,
-        timestamp: new Date(parseInt(json.Timestamp) * 1000),
+        timestamp: new Date(parseInt(json.Timestamp) * 1000), // Unix Time -> Date type
       };
-      setTalkogs((talkogs) => [talkog, ...talkogs]);
+      setTalkogs((talkogs) => {
+        if (talkogs.some((v) => equals(v, talkog))) {
+          return talkogs;
+        } else {
+          return [talkog, ...talkogs];
+        }
+      });
     });
 
     return () => {
@@ -46,6 +48,17 @@ export const App = () => {
       setTalkogs((_) => []);
     }
   }, [userId]);
+
+  useInterval(() => {
+    if (validate(userId)) {
+      socketRef.current?.send(
+        JSON.stringify({
+          action: "fetchTalkogs",
+          UserId: userId,
+        })
+      );
+    }
+  }, 1000);
 
   return (
     <div className="container mx-auto my-20">
