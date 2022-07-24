@@ -36,9 +36,7 @@ export const App = () => {
   }, []);
 
   useEffect(() => {
-    if (!validate(userId)) {
-      setTalkogs((_) => []);
-    }
+    setTalkogs((_) => []);
   }, [userId]);
 
   useInterval(() => {
@@ -61,6 +59,7 @@ export const App = () => {
         }
         placeholder="Type your user ID here"
         onChange={(e) => setUserId(e.target.value)}
+        autoFocus
       />
 
       <div className="mx-40 my-28">
