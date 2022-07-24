@@ -36,15 +36,7 @@ export const App = () => {
   }, []);
 
   useEffect(() => {
-    if (validate(userId)) {
-      socketRef.current?.send(
-        JSON.stringify({
-          action: "fetchTalkogs",
-          UserId: userId,
-        })
-      );
-    }
-    if (userId === "") {
+    if (!validate(userId)) {
       setTalkogs((_) => []);
     }
   }, [userId]);
