@@ -46,7 +46,7 @@ func putTalkog(ctx context.Context, requestData requestData) error {
 	}
 	client := dynamodb.NewFromConfig(cfg)
 	_, err = client.PutItem(ctx, &dynamodb.PutItemInput{
-		TableName: aws.String(os.Getenv("DYNAMODB_TABLE")),
+		TableName: aws.String(os.Getenv("TALKOG_TABLE")),
 		Item:      item,
 	})
 	if err != nil {

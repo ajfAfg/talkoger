@@ -47,7 +47,7 @@ func getTalkogsByUserId(ctx context.Context, userId string) ([]talkog, error) {
 		return records, err
 	}
 	scan, err := client.Scan(ctx, &dynamodb.ScanInput{
-		TableName:                 aws.String(os.Getenv("DYNAMODB_TABLE")),
+		TableName:                 aws.String(os.Getenv("TALKOG_TABLE")),
 		FilterExpression:          expr.Filter(),
 		ExpressionAttributeNames:  expr.Names(),
 		ExpressionAttributeValues: expr.Values(),
