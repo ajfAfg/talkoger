@@ -1,8 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import TextareaAutosize from "react-textarea-autosize";
 import { validate } from "uuid";
-import { equals, Talkog } from "./talkog";
-import { useInterval } from "./useInterval";
+import { Talkog } from "./talkog";
 
 export const App = () => {
   const [userId, setUserId] = useState("");
@@ -22,11 +21,11 @@ export const App = () => {
         timestamp: new Date(parseInt(json.Timestamp) * 1000), // Unix Time -> Date type
       };
       setTalkogs((talkogs) => {
-        if (talkogs.some((v) => equals(v, talkog))) {
-          return talkogs;
-        } else {
-          return [talkog, ...talkogs];
-        }
+        // Sort the data to be displayed in the correct order,
+        // since new data may be received while the initial data is being received.
+        return [talkog, ...talkogs].sort(
+          ({ timestamp: t1 }, { timestamp: t2 }) => t1.getTime() - t2.getTime()
+        );
       });
     });
 
@@ -36,10 +35,6 @@ export const App = () => {
   }, []);
 
   useEffect(() => {
-    setTalkogs((_) => []);
-  }, [userId]);
-
-  useInterval(() => {
     if (validate(userId)) {
       socketRef.current?.send(
         JSON.stringify({
@@ -47,8 +42,10 @@ export const App = () => {
           UserId: userId,
         })
       );
+    } else {
+      setTalkogs((_) => []);
     }
-  }, 1000);
+  }, [userId]);
 
   return (
     <div className="container mx-auto my-20">
