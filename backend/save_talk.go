@@ -4,14 +4,17 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
+	"net/url"
 	"os"
-	"time"
 
+	"github.com/ajfAfg/talkoger/backend/talkog"
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/feature/dynamodb/attributevalue"
+	"github.com/aws/aws-sdk-go-v2/feature/dynamodb/expression"
+	"github.com/aws/aws-sdk-go-v2/service/apigatewaymanagementapi"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 )
 
@@ -20,27 +23,22 @@ type requestData struct {
 	Talk   string
 }
 
-type talkog struct {
-	UserId    string // UUID
-	Timestamp int64  // Unix Time
-	Talk      string
+type connection struct {
+	ConnectionId string
+	UserId       string // UUID
 }
 
 func createErrorResponse(err error) (events.APIGatewayProxyResponse, error) {
 	return events.APIGatewayProxyResponse{StatusCode: http.StatusInternalServerError}, err
 }
 
-func putTalkog(ctx context.Context, requestData requestData) error {
-	item, err := attributevalue.MarshalMap(talkog{
-		UserId:    requestData.UserId,
-		Timestamp: time.Now().Unix(),
-		Talk:      requestData.Talk,
-	})
+func putTalkog(ctx context.Context, talkog talkog.Talkog) error {
+	item, err := attributevalue.MarshalMap(talkog)
 	if err != nil {
 		return err
 	}
 
-	cfg, err := config.LoadDefaultConfig(context.TODO(), config.WithRegion(os.Getenv("REGION")))
+	cfg, err := config.LoadDefaultConfig(ctx, config.WithRegion(os.Getenv("REGION")))
 	if err != nil {
 		return err
 	}
@@ -56,14 +54,98 @@ func putTalkog(ctx context.Context, requestData requestData) error {
 	return nil
 }
 
-func handle(req *events.APIGatewayWebsocketProxyRequest) (events.APIGatewayProxyResponse, error) {
+func getConnectionsByUserId(ctx context.Context, userId string) ([]connection, error) {
+	var connections []connection
+
+	cfg, err := config.LoadDefaultConfig(ctx, config.WithRegion(os.Getenv("REGION")))
+	if err != nil {
+		return connections, err
+	}
+	client := dynamodb.NewFromConfig(cfg)
+
+	expr, err := expression.NewBuilder().WithFilter(
+		expression.Equal(expression.Name("UserId"), expression.Value(userId)),
+	).Build()
+	if err != nil {
+		return connections, err
+	}
+	scan, err := client.Scan(ctx, &dynamodb.ScanInput{
+		TableName:                 aws.String(os.Getenv("CONNECTION_TABLE")),
+		FilterExpression:          expr.Filter(),
+		ExpressionAttributeNames:  expr.Names(),
+		ExpressionAttributeValues: expr.Values(),
+	})
+	if err != nil {
+		return connections, err
+	}
+
+	err = attributevalue.UnmarshalListOfMaps(scan.Items, &connections)
+	if err != nil {
+		return connections, err
+	}
+
+	return connections, nil
+}
+
+func sendTalkog(ctx context.Context, talkog talkog.Talkog, userId string, req *events.APIGatewayWebsocketProxyRequest) error {
+	connections, err := getConnectionsByUserId(ctx, userId)
+	if err != nil {
+		return err
+	}
+
+	endpoint := url.URL{
+		Path:   req.RequestContext.Stage,
+		Host:   req.RequestContext.DomainName,
+		Scheme: "https",
+	}
+	cfg, err := config.LoadDefaultConfig(
+		ctx,
+		config.WithEndpointResolver(
+			aws.EndpointResolverFunc(
+				func(service, region string) (aws.Endpoint, error) {
+					return aws.Endpoint{
+						SigningRegion: os.Getenv("REGION"),
+						URL:           endpoint.String(),
+					}, nil
+				})),
+	)
+	if err != nil {
+		return err
+	}
+
+	client := apigatewaymanagementapi.NewFromConfig(cfg)
+	data, err := json.Marshal(talkog)
+	if err != nil {
+		return err
+	}
+	for _, conn := range connections {
+		_, err = client.PostToConnection(ctx, &apigatewaymanagementapi.PostToConnectionInput{
+			ConnectionId: &conn.ConnectionId,
+			Data:         data,
+		})
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func handle(ctx context.Context, req *events.APIGatewayWebsocketProxyRequest) (events.APIGatewayProxyResponse, error) {
 	var requestData requestData
 	err := json.Unmarshal([]byte(req.Body), &requestData)
 	if err != nil {
 		return createErrorResponse(err)
 	}
 
-	err = putTalkog(context.TODO(), requestData)
+	talkog := talkog.New(requestData.UserId, requestData.Talk)
+
+	err = putTalkog(ctx, talkog)
+	if err != nil {
+		return createErrorResponse(err)
+	}
+
+	err = sendTalkog(ctx, talkog, requestData.UserId, req)
 	if err != nil {
 		return createErrorResponse(err)
 	}
