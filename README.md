@@ -27,8 +27,10 @@ This application is similar to a logger. The name of this application is derived
   s1 -- push --> c2
 
   subgraph AWS
-  s1 <--> s2
-  s2 <--> s3
+  s1 --> s2
+  s2 --> s1
+  s2 --> s3
+  s3 --> s2
   end
 ```
 
