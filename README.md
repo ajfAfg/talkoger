@@ -8,10 +8,29 @@ This application is similar to a logger. The name of this application is derived
 
 - Client (HoloLens 2)
   - Convert the audio of conversations into text and send it to the server
-- Client (Web browser)
+- Client (Web Client)
   - View the text saved on the server
 - Server (Amazon API Gateway, AWS Lambda, Amazon DynamoDB)
   - Save and send text
+
+```mermaid
+  graph LR
+
+  c1((HoloLens 2))
+  c2((Web Client))
+  s1{Amazon API Gateway}
+  s2["AWS Lambda"]
+  s3[(Amazon DynamoDB)]
+
+  c1 -- save --> s1
+  c2 -- fetch --> s1
+  s1 -- push --> c2
+
+  subgraph AWS
+  s1 <--> s2
+  s2 <--> s3
+  end
+```
 
 ## Communication
 
@@ -42,7 +61,7 @@ Send data in the following format.
 }
 ```
 
-The following data will be sent.
+The following data will be sent in real time.
 
 ```json
 {
@@ -50,5 +69,4 @@ The following data will be sent.
   "Timestamp": 1657921427, // Unix time
   "Talk": "Nice to meet you."
 }
-...
 ```
