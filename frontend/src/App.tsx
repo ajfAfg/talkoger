@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import TextareaAutosize from "react-textarea-autosize";
 import { validate } from "uuid";
-import { Talkog } from "./talkog";
+import { create, Talkog } from "./talkog";
 
 export const App = () => {
   const [userId, setUserId] = useState("");
@@ -14,18 +14,25 @@ export const App = () => {
     );
 
     socketRef.current.addEventListener("message", ({ data }) => {
-      const json = JSON.parse(data);
-      const talkog: Talkog = {
-        userId: json.UserId,
-        talk: json.Talk,
-        timestamp: new Date(parseInt(json.Timestamp) * 1000), // Unix Time -> Date type
-      };
+      const { UserId, Talk, Timestamp } = JSON.parse(data);
+      const talkog = create(UserId, Talk, parseInt(Timestamp));
       setTalkogs((talkogs) => {
-        // Sort the data to be displayed in the correct order,
-        // since new data may be received while the initial data is being received.
-        return [talkog, ...talkogs].sort(
-          ({ timestamp: t1 }, { timestamp: t2 }) => t1.getTime() - t2.getTime()
-        );
+        if (talkogs.length === 0) {
+          return [talkog];
+        }
+
+        if (talkog.timestamp.getTime() < talkogs[0].timestamp.getTime()) {
+          // Sort the data to be displayed in the correct order,
+          // since new data may be received while the initial data is being received.
+          return [talkog, ...talkogs]
+            .sort(
+              ({ timestamp: t1 }, { timestamp: t2 }) =>
+                t1.getTime() - t2.getTime()
+            )
+            .reverse();
+        } else {
+          return [talkog, ...talkogs];
+        }
       });
     });
 
@@ -64,8 +71,8 @@ export const App = () => {
           <></>
         ) : (
           talkogs
-            .map(({ talk, timestamp }) => (
-              <div className="grid gap-20 grid-cols-4">
+            .map(({ talk, timestamp }, i) => (
+              <div className="grid gap-20 grid-cols-4" key={i}>
                 <div className="col-span-3">
                   <p className="break-words text-xl p-4">{talk}</p>
                 </div>
