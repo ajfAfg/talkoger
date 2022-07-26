@@ -1,5 +1,5 @@
 # HANDLERS := save_message fetch_message
-HANDLERS := ${shell find . -name '*.go' -exec basename {} .go \;}
+HANDLERS := ${shell find . -name '*.go' -depth 1 -exec basename {} .go \;}
 
 .PHONEY: ship
 ship:
