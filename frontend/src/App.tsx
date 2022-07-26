@@ -9,46 +9,46 @@ export const App = () => {
   const socketRef = useRef<WebSocket | null>(null);
 
   useEffect(() => {
-    socketRef.current = new WebSocket(
-      import.meta.env.VITE_WEBSOCKET_SERVER_URL
-    );
-
-    socketRef.current.addEventListener("message", ({ data }) => {
-      const { UserId, Talk, Timestamp } = JSON.parse(data);
-      const talkog = create(UserId, Talk, parseInt(Timestamp));
-      setTalkogs((talkogs) => {
-        if (talkogs.length === 0) {
-          return [talkog];
-        }
-
-        if (talkog.timestamp.getTime() < talkogs[0].timestamp.getTime()) {
-          // Sort the data to be displayed in the correct order,
-          // since new data may be received while the initial data is being received.
-          return [talkog, ...talkogs]
-            .sort(
-              ({ timestamp: t1 }, { timestamp: t2 }) =>
-                t1.getTime() - t2.getTime()
-            )
-            .reverse();
-        } else {
-          return [talkog, ...talkogs];
-        }
-      });
-    });
-
-    return () => {
-      socketRef.current?.close();
-    };
-  }, []);
-
-  useEffect(() => {
     if (validate(userId)) {
-      socketRef.current?.send(
-        JSON.stringify({
-          action: "fetchTalkogs",
-          UserId: userId,
-        })
+      socketRef.current = new WebSocket(
+        import.meta.env.VITE_WEBSOCKET_SERVER_URL
       );
+
+      socketRef.current.addEventListener("message", ({ data }) => {
+        const { UserId, Talk, Timestamp } = JSON.parse(data);
+        const talkog = create(UserId, Talk, parseInt(Timestamp));
+        setTalkogs((talkogs) => {
+          if (talkogs.length === 0) {
+            return [talkog];
+          }
+
+          if (talkog.timestamp.getTime() < talkogs[0].timestamp.getTime()) {
+            // Sort the data to be displayed in the correct order,
+            // since new data may be received while the initial data is being received.
+            return [talkog, ...talkogs]
+              .sort(
+                ({ timestamp: t1 }, { timestamp: t2 }) =>
+                  t1.getTime() - t2.getTime()
+              )
+              .reverse();
+          } else {
+            return [talkog, ...talkogs];
+          }
+        });
+      });
+
+      socketRef.current.addEventListener("open", (_) => {
+        socketRef.current?.send(
+          JSON.stringify({
+            action: "fetchTalkogs",
+            UserId: userId,
+          })
+        );
+      });
+
+      return () => {
+        socketRef.current?.close();
+      };
     } else {
       setTalkogs((_) => []);
     }
